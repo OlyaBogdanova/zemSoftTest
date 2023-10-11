@@ -2,7 +2,7 @@
   <div class="main__container">
     <i-header />
     <i-tool-bar />
-    <i-table :columns="headers" :rows="contactsList" :slots="slots">
+    <i-table :columns="headers" :rows="computedData" :slots="slots">
       <template #name="props">
         <div class="name__wrapper">
           <i-avatar color="#FFC700" :initial="props.name" />
@@ -13,10 +13,7 @@
   </div>
 </template>
 <script setup>
-import { ref } from 'vue'
-// import iButton from '@/components/UI/iButton.vue'
-// import iInput from '@/components/UI/iInput.vue'
-// import iDropDown from '@/components/UI/iDropDown.vue'
+import { ref, provide, computed } from 'vue'
 import iTable from '@/components/iTable.vue'
 import iToolBar from '@/components/iToolBar.vue'
 import iHeader from '@/components/iHeader.vue'
@@ -31,6 +28,14 @@ const headers = ref([
   { field: 'email', title: 'Email' },
   { field: 'date', title: 'Создан' }
 ])
+const currentSelect=ref('Все')
+provide('currentSelect', currentSelect)
+const computedData=computed(()=>{
+  if(currentSelect.value==='Все'){
+    return contactsList.value
+  }
+  return contactsList.value.filter(elem=>elem.category===currentSelect.value)
+})
 const slots = ref(['name'])
 </script>
 <style lang="scss" scoped>

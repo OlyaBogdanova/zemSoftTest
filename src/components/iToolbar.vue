@@ -2,7 +2,7 @@
   <div class="toolbar__container">
     <div class="toolbar__bg"></div>
     <div class="toolbar">
-      <i-drop-down :options="options" />
+      <i-drop-down :options="options" width="235px" v-model="currentSelect" />
       <i-button border="1px solid #2F80ED" color="#2F80ED" radius="28px" @click="$router.push('/add')">
         <template #icon>
           <svg
@@ -26,8 +26,9 @@
 <script setup>
 import iDropDown from '@/components/UI/iDropDown.vue'
 import iButton from '@/components/UI/iButton.vue'
-import { ref } from 'vue'
-const options = ref(['Все', 'Родственники', 'Коллеги'])
+import { ref, inject } from 'vue'
+const options = ref([{value:'all', label:"Все"}, {value:'family', label:"Родственники"},  {value:'job', label:"Коллеги"}])
+const currentSelect=inject('currentSelect')
 </script>
 <style lang="scss" scoped>
 @import '@/assets/variables.scss';

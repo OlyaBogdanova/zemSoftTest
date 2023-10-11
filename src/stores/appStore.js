@@ -27,6 +27,10 @@ export const useAppStore = defineStore('appStore', () => {
     const currentElem = initialData.find((elem) => elem.id === +idElem)
     return currentElem
   }
+  function updateLocalStorage(idLS, newElem) {
+    localStorageHelper.updateCurrentElem(idLS, newElem)
+    getLocalStorageData()
+  }
 
-  return { contactsList, currentPersonId, getCurrentElem, maxContactID }
+  return { contactsList, currentPersonId, getCurrentElem, maxContactID, updateLocalStorage }
 })

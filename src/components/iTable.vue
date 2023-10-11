@@ -6,11 +6,7 @@
           v-for="(col, index) in columns"
           :key="col.title"
           :style="[
-            index === 0
-              ? { 'text-align': 'left' }
-              : index === columns.length - 1
-              ? { 'text-align': 'right' }
-              : { 'text-align': 'center' }
+            index !== columns.length - 1 ? { 'text-align': 'left' } : { 'text-align': 'right' }
           ]"
         >
           {{ col.title }}
@@ -18,17 +14,13 @@
       </tr>
     </thead>
     <tbody>
-      <tr v-for="(row, ind) in rows" :key="row">
+      <tr v-for="(row, ind) in rows" :key="row" @click="openEditForm(row.id)">
         <td
           v-for="(col, index) in columns"
           :key="index"
           :class="{ withoutBorder: ind === rows.length - 1 }"
           :style="[
-            index === 0
-              ? { 'text-align': 'left' }
-              : index === columns.length - 1
-              ? { 'text-align': 'right' }
-              : { 'text-align': 'center' }
+            index !== columns.length - 1 ? { 'text-align': 'left' } : { 'text-align': 'right' }
           ]"
         >
           <template v-if="!slots.includes(col.field)">
@@ -43,6 +35,13 @@
   </table>
 </template>
 <script setup>
+import { useRouter } from 'vue-router'
+import { useAppStore } from '@/stores/appStore.js'
+const store = useAppStore()
+const router = useRouter()
+import { storeToRefs } from 'pinia'
+const { currentPersonId } = storeToRefs(store)
+
 defineProps({
   columns: {
     type: Array,
@@ -58,6 +57,13 @@ defineProps({
     default: () => []
   }
 })
+
+function openEditForm(id) {
+  currentPersonId.value = id
+  setTimeout(() => {
+    router.push({ name: 'add', query: { id: currentPersonId.value } })
+  }, 0)
+}
 </script>
 <style lang="scss" scoped>
 @import '@/assets/variables.scss';

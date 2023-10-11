@@ -15,23 +15,77 @@
             fill="#DDDDDD"
           />
         </svg>
-        <div class="header_add__tile">Добавить контакт</div>
+        <div class="header_add__title">Добавить контакт</div>
       </div>
     </i-header>
     <div class="form__container">
-        <div class="form__title">Новый контакт</div>
-        <form  class="form">
-            <i-input label="Имя" placeholder="Например «Андрей»..."/>
-        </form>
-
+      <div class="form__title">Новый контакт</div>
+      <form class="form">
+        <i-input
+          label="Имя"
+          placeholder="Например «Андрей»..."
+          class="form__input"
+          :errors="v$.name.$errors"
+          v-model="newPerson.name"
+        />
+        <i-input
+          label="Телефон"
+          v-maska:[options]
+          placeholder="+7(___)-___-__-__"
+          class="form__input"
+          :errors="computedPhoneErrors"
+          v-model="newPerson.phone"
+        />
+        <i-input
+          label="Email"
+          placeholder="Например «pochta@domain.ru»..."
+          class="form__input"
+          :errors="v$.email.$errors"
+          v-model="newPerson.email"
+        />
+        <i-drop-down
+          menu-title="Не выбрано"
+          label="Категория"
+          :options="dropDownOptions"
+          :errors="v$.category.$errors"
+          v-model="newPerson.category"
+        />
+        <div class="btn__container">
+          <i-button
+            radius="4px"
+            color="#545454"
+            back-ground="#FFC700"
+            border="1px solid #FFC700"
+            @click="saveNewPerson"
+          >
+            <template #default>Сохранить</template>
+            <template #icon
+              ><svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M0 1.33333C0 0.596954 0.596954 0 1.33333 0H9.05719C9.41081 0 9.74995 0.140476 10 0.390524L11.8047 2.19526C11.9298 2.32029 12 2.48986 12 2.66667V10.6667C12 11.403 11.403 12 10.6667 12H1.33333C0.596954 12 0 11.403 0 10.6667V1.33333ZM4 10.6667H8V6.66667H4V10.6667ZM9.33333 10.6667H10.6667V2.94281L9.33333 1.60948V2.66667C9.33333 3.40305 8.73638 4 8 4H4C3.26362 4 2.66667 3.40305 2.66667 2.66667V1.33333H1.33333V10.6667H2.66667V6.66667C2.66667 5.93029 3.26362 5.33333 4 5.33333H8C8.73638 5.33333 9.33333 5.93029 9.33333 6.66667V10.6667ZM4 1.33333V2.66667H8V1.33333H4Z"
+                  fill="#545454"
+                />
+              </svg>
+            </template>
+          </i-button>
+        </div>
+      </form>
     </div>
   </div>
 </template>
 <script setup>
 import iHeader from '@/components/iHeader.vue'
 import iInput from '@/components/UI/iInput.vue'
+import iDropDown from '@/components/UI/iDropDown.vue'
+import iButton from '@/components/UI/iButton.vue'
 import PERSON from '@/models/person.js'
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 defineProps({
@@ -41,18 +95,29 @@ defineProps({
     default: () => {}
   }
 })
+
 import { useAppStore } from '@/stores/appStore.js'
+import { useVuelidate } from '@vuelidate/core'
+import { required, email, minLength, helpers } from '@vuelidate/validators'
 const store = useAppStore()
 const router = useRouter()
 import { storeToRefs } from 'pinia'
+import { vMaska } from 'maska'
 const { currentPersonId, maxContactID } = storeToRefs(store)
-const { getCurrentElem } = store
+const { getCurrentElem, updateLocalStorage } = store
 const currentPerson = ref(null)
 const newPerson = reactive(PERSON.createFromData())
+const phoneCompleted = reactive([{ value: false, $message: 'Некорретный номер телефона' }])
+const options = reactive({
+  mask: '+#(###)-###-##-##',
+  onMaska: (detail) => (phoneCompleted[0].value = detail.completed),
+  eager: true
+})
+const computedPhoneErrors = ref([])
 function init() {
   if (router.currentRoute.value.query.id) {
     currentPersonId.value = router.currentRoute.value.query.id
-    newPerson.value = getCurrentElem('person', currentPersonId.value)
+    newPerson.value = getCurrentElem('contacts', currentPersonId.value)
     newPerson.id = currentPersonId.value
     for (const key in newPerson) {
       if (newPerson.value[key]) {
@@ -63,7 +128,48 @@ function init() {
     newPerson.id = maxContactID.value + 1
   }
 }
+
 init()
+const dropDownOptions = ref([
+  { value: 'family', label: 'Родственники' },
+  { value: 'job', label: 'Коллеги' }
+])
+const rules = computed(() => {
+  return {
+    name: {
+      required: helpers.withMessage('Поле не может быть пустым', required),
+      minLength: helpers.withMessage('Слишком короткое имя', minLength(3))
+    },
+
+    phone: { required: helpers.withMessage('Поле не может быть пустым', required) }, // Matches state.lastName
+    email: {
+      email: helpers.withMessage('Некорректный email', email),
+      required: helpers.withMessage('Поле не может быть пустым', required)
+    },
+    category: { required: helpers.withMessage('Поле не может быть пустым', required) }
+  }
+})
+
+const v$ = useVuelidate(rules, newPerson)
+
+function saveNewPerson() {
+  v$.value.$validate()
+
+  if (v$.value.phone.$errors.length !== 0) {
+    computedPhoneErrors.value = v$.value.phone.$errors
+  } else if (phoneCompleted[0].value === false) {
+    computedPhoneErrors.value = phoneCompleted
+  } else{
+     computedPhoneErrors.value = []
+  }
+
+const formatter = new Intl.DateTimeFormat('ru-RU')
+  if (!v$.value.$error && phoneCompleted[0].value) {
+    newPerson.date=formatter.format(new Date(Date.now()))
+    updateLocalStorage('contacts', newPerson)
+    router.push('/')
+  }
+}
 </script>
 <style lang="scss" scoped>
 @import '@/assets/variables.scss';
@@ -74,16 +180,15 @@ init()
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
   position: absolute;
   top: 0;
   left: 0;
   z-index: -1;
-
 }
-.form__container{
-      padding: 48px 64px;
+.form__container {
+  margin-top: 25px;
+  padding: 48px 64px;
   background-color: #fff;
   width: 704px;
 }
@@ -97,9 +202,30 @@ init()
 .header_add__icon {
   margin-right: 8px;
 }
-.header_add__tile {
+.header_add__title {
   font-weight: bold;
   font-size: 16px;
   color: #ddd;
+}
+.form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.form__title {
+  font-weight: bold;
+  color: $darkGray;
+  font-size: 32px;
+  margin-bottom: 24px;
+}
+.form__input {
+  margin-bottom: 8px;
+}
+.btn__container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 32px;
 }
 </style>

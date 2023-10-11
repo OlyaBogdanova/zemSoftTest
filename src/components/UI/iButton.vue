@@ -1,7 +1,7 @@
 <template>
   <button
     class="btn"
-    @click="$emit('click')"
+    @click.prevent="$emit('click')"
     :style="{
       'border-radius': radius,
       'background-color': backGround,
